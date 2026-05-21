@@ -1,0 +1,108 @@
+Carbon NxDI A100-style batch-16 benchmark manifest
+Date: 2026-05-20
+
+Target
+- Instance type: trn2.3xlarge
+- Neuron topology: 1 Trainium2 device, 4 logical NeuronCores, LNC=2
+- NxDI workspace: patched local checkout
+- Python environment: Neuron SDK 2.29 compatible virtual environment
+- Model root: ${MODEL_ROOT}
+
+Runtime
+- torch==2.9.1
+- torch-neuronx==2.9.0.2.13.26312+8e870898
+- torch-xla==2.9.0
+- neuronx-cc==2.24.5133.0+58f8de22
+- neuronx-distributed==0.18.27753+1cafd54f
+- neuronx-distributed-inference==0.9.0+9f982a56.dev
+- transformers==4.57.6
+
+Shape
+- Tensor parallel degree: 4
+- Batch size: 16
+- Dtype: bfloat16
+- Logical NC config: 2
+- Context bucket: 256
+- Token-generation bucket: 512
+- max_context_length: 256
+- seq_len: 512
+- max_length: 512
+- max_new_tokens: 170
+- prompt size: 1020 bp per sequence
+- decode target: 1020 bp per sequence
+- generated batch payload: approximately 16.3 kbp per timed generation call
+- pad_token_id: 151643
+- prompt form for compact Carbon DNA tokenization: <dna>{1020_bp_sequence}
+- decoding: greedy, top_k=1, direct 6-mer, FNS disabled
+
+Measured Results
+- Carbon-500M: p50_elapsed=0.8669s, p50_token_throughput=3137.6tok/s, p50_bp_throughput=18825bp/s, p50_kbp_throughput=18.83kbp/s
+- Carbon-3B: p50_elapsed=1.4839s, p50_token_throughput=1833.0tok/s, p50_bp_throughput=10998bp/s, p50_kbp_throughput=11.00kbp/s
+- Carbon-8B: p50_elapsed=1.9860s, p50_token_throughput=1369.6tok/s, p50_bp_throughput=8212bp/s, p50_kbp_throughput=8.21kbp/s
+
+Optimization Pass
+- Carbon-500M BF16 NxDI baseline: 18.83 kbp/s
+- Carbon-500M top-k kernel: 18.63 kbp/s
+- Carbon-500M top-k kernel + global_topk=1: 18.41 kbp/s
+- Carbon-500M fused QKV: 18.06 kbp/s
+- Carbon-500M safe NKI CTE/MLP subset: 15.26 kbp/s
+- Carbon-500M vLLM Neuron prompt-list endpoint: 15.07 kbp/s
+- Carbon-3B BF16 NxDI baseline: 11.00 kbp/s
+- Carbon-3B KV-cache FP8: 10.84 kbp/s
+- Carbon-3B fused QKV: 10.88 kbp/s
+- Carbon-3B safe NKI CTE/MLP subset: 7.48 kbp/s
+- Carbon-3B vLLM Neuron prompt-list endpoint: 9.06 kbp/s
+- Carbon-8B BF16 NxDI baseline: 8.21 kbp/s
+- Carbon-8B KV-cache FP8: 7.97 kbp/s
+- Conclusion: for the short-context batch-16 A100-style shape, plain BF16 NxDI remains the best measured setup. The promising API-guide knobs compiled but did not improve throughput.
+
+A100 Reference From Carbon Technical Report
+- Carbon-3B direct 6-mer, single A100-80GB, vLLM dynamic batching, n=16, 1 kbp output: 18.9 kbp/s
+- Carbon-8B direct 6-mer, single A100-80GB, vLLM dynamic batching, n=16, 1 kbp output: 12.0 kbp/s
+- Carbon-3B and Carbon-8B FNS bp-level, same A100 setup: 12.3 kbp/s
+- Carbon-500M A100 throughput was not reported in the table used for comparison.
+
+Cost Lens
+- trn2.3xlarge public Capacity Blocks rate used: $2.235/hr for one AWS Trainium2 accelerator
+- trn2.48xlarge public Capacity Blocks rate used for scale-out framing: $35.7608/hr for 16 AWS Trainium2 accelerators, or the same $2.235/hr per accelerator
+- p4de.24xlarge public Capacity Blocks rate used for A100-80GB framing: $14.7663/hr for eight A100 accelerators
+- normalized A100-80GB rate used only for full-utilization comparison: $1.8457875/hr per accelerator
+- purchased A100 node floor used for single-workload comparison: $14.7663/hr
+- Carbon-500M Trainium2 cost: $33/Gbp generated
+- Carbon-3B Trainium2 cost: $56/Gbp generated
+- Carbon-8B Trainium2 cost: $76/Gbp generated
+- Carbon-3B A100 full-node floor cost: $217/Gbp generated
+- Carbon-8B A100 full-node floor cost: $342/Gbp generated
+- Carbon-3B normalized A100 full-utilization cost: $27/Gbp generated
+- Carbon-8B normalized A100 full-utilization cost: $43/Gbp generated
+- Procurement interpretation: normalized A100 economics are strong when all eight GPUs are kept busy. Trainium2's advantage for this story is the smaller, one-accelerator starting unit: the trn2.3xlarge hourly reservation floor is about 6.6x lower than reserving a full p4de.24xlarge for one Carbon workload.
+
+Local Result Artifacts
+- results/carbon_500m_tp4_bs16_s512_c256_n170_a100_style.json
+- results/carbon_3b_tp4_bs16_s512_c256_n170_a100_style.json
+- results/carbon_8b_tp4_bs16_s512_c256_n170_a100_style.json
+- results/carbon_500m_tp4_bs16_s512_c256_n170_topkkernel_a100_style.json
+- results/carbon_500m_tp4_bs16_s512_c256_n170_topkglobal1_a100_style.json
+- results/carbon_500m_tp4_bs16_s512_c256_n170_fusedqkv_a100_style.json
+- results/carbon_500m_tp4_bs16_s512_c256_n170_nki_cte_mlp_a100_style.json
+- results/carbon_500m_tp4_bs16_s512_c256_n170_vllm_prompt_list_a100_style.json
+- results/carbon_3b_tp4_bs16_s512_c256_n170_kvfp8_a100_style.json
+- results/carbon_3b_tp4_bs16_s512_c256_n170_fusedqkv_a100_style.json
+- results/carbon_3b_tp4_bs16_s512_c256_n170_nki_cte_mlp_a100_style.json
+- results/carbon_3b_tp4_bs16_s512_c256_n170_vllm_prompt_list_a100_style.json
+- results/carbon_8b_tp4_bs16_s512_c256_n170_kvfp8_a100_style.json
+
+Local Config Artifacts
+- configs/compiled__carbon-500m-tp4-bs16-s512-c256-n170-bf16__neuron_config.json
+- configs/compiled__carbon-3b-tp4-bs16-s512-c256-n170-bf16__neuron_config.json
+- configs/compiled__carbon-8b-tp4-bs16-s512-c256-n170-bf16__neuron_config.json
+
+Compiled Artifacts
+- ${COMPILED_ROOT}/Carbon-500M-tp4-bs16-s512-c256-n170-bf16
+- ${COMPILED_ROOT}/Carbon-3B-tp4-bs16-s512-c256-n170-bf16
+- ${COMPILED_ROOT}/Carbon-8B-tp4-bs16-s512-c256-n170-bf16
+
+Notes
+- The benchmark harness is experiments/carbon_a100_style_benchmark.py.
+- These runs are closer to the A100 reference than the original batch-1 prompt suite, but still not a controlled accelerator shootout: A100 uses vLLM dynamic batching while Trainium2 uses NxDI static batch 16.
+- The most promising optimization follow-up is profile-driven work around the 500M/8B GQA layout warning, attention CTE/TKG eligibility, QKV/output projection, RoPE, and RMSNorm paths. NxDI already selects Neuron attention kernels in this flow, so custom kernels should be introduced only after profiling identifies a real bottleneck.

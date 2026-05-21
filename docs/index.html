@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="A practical benchmark showing Hugging Face Bio Carbon running on AWS Trainium2 with NxD Inference: what worked, what we measured, and why it matters for bio and HCLS teams moving open models into production." name="description"/>
+<meta content="article" property="og:type"/>
+<meta content="Running Hugging Face Carbon on AWS Trainium2 with NxD Inference" property="og:title"/>
+<meta content="Carbon-500M, Carbon-3B, and Carbon-8B ran on a single trn2.3xlarge through NxD Inference. Here is what worked, what we measured, and why it matters for production bio AI teams." property="og:description"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Running Hugging Face Carbon on AWS Trainium2 with NxD Inference" name="twitter:title"/>
+<meta content="A practical AWS Trainium2 benchmark for Hugging Face Bio Carbon, written for teams moving open bio models from release day into production-shaped infrastructure." name="twitter:description"/>
+<title>Running Hugging Face Carbon on AWS Trainium2 with NxD Inference</title>
+<link href="https://cdn.prod.website-files.com/6490383845d4c0f51f929ca8/649052c9d3731fb704eea658_favicon.svg" rel="icon" type="image/svg+xml"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+      @font-face {
+        font-family: "Iowan Old Style BT";
+        src: url("https://thinkingmachines.ai/fonts/iowan-old-style/iowan-old-style_regular.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Iowan Old Style BT";
+        src: url("https://thinkingmachines.ai/fonts/iowan-old-style/iowan-old-style_italic.woff2") format("woff2");
+        font-style: italic;
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Iowan Old Style BT";
+        src: url("https://thinkingmachines.ai/fonts/iowan-old-style/iowan-old-style_bold.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "GT America";
+        src: url("https://thinkingmachines.ai/fonts/gt-america/GT-America-Standard-Regular.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "GT America";
+        src: url("https://thinkingmachines.ai/fonts/gt-america/GT-America-Standard-Medium.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+      }
+
+      :root {
+        --bg: #fff;
+        --bg-soft: #f7f7f7;
+        --bg-code: #f4f4f3;
+        --fg: #1a1a1a;
+        --fg-2: #333;
+        --fg-3: #666;
+        --fg-4: #999;
+        --line: #e5e5e5;
+        --line-strong: #d0d0d0;
+        --accent: #1877f2;
+        --link: #1877f2;
+        --max-content: 680px;
+        --max-wide: 900px;
+        --toc-width: 200px;
+        --toc-gap: 40px;
+        --font-serif: "Iowan Old Style BT", Georgia, "Times New Roman", serif;
+        --font-sans: "GT America", -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, sans-serif;
+        --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Consolas, monospace;
+        --c-blue: #1877f2;
+        --c-red: #ef4444;
+        --c-green: #22c55e;
+        --c-amber: #f59e0b;
+        --c-purple: #8b5cf6;
+        --c-teal: #14b8a6;
+        --c-gray: #6b7280;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-serif);
+        font-size: 17px;
+        line-height: 1.7;
+      }
+
+      a {
+        color: var(--link);
+      }
+
+      .reading-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 2px;
+        background: var(--accent);
+        z-index: 1000;
+        transition: width 0.1s linear;
+      }
+
+      .shell {
+        min-height: 100vh;
+      }
+
+      #main.post {
+        max-width: var(--max-wide);
+        margin: 0 auto;
+        padding: 0 1.6rem 4rem;
+        position: relative;
+      }
+
+      .post-heading {
+        text-align: center;
+        max-width: var(--max-content);
+        margin: 3.5rem auto 0;
+      }
+
+      .post-title {
+        margin: 0;
+        font-size: 2.4rem;
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .post-title-main,
+      .post-title-sub {
+        display: block;
+      }
+
+      .post-title-sub {
+        margin-top: 0.35rem;
+        font-size: 0.92em;
+        color: var(--fg-2);
+      }
+
+      .authors {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem 2rem;
+        margin: 1.6rem auto 0;
+        max-width: 420px;
+        text-align: center;
+        font-family: var(--font-sans);
+      }
+
+      .author-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.1rem;
+      }
+
+      .author-name {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--fg);
+      }
+
+      .author-name a {
+        color: var(--fg);
+        text-decoration: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .author-name a:hover {
+        border-bottom-color: var(--fg);
+      }
+
+      .author-email {
+        font-size: 0.82rem;
+        color: var(--fg-3);
+      }
+
+      .author-email a {
+        color: var(--fg-3);
+        text-decoration: none;
+      }
+
+      .author-affiliation {
+        margin: 1rem 0 0;
+        text-align: center;
+      }
+
+      .loka-logo {
+        display: inline-block;
+        height: 1.15em;
+        width: auto;
+        vertical-align: -0.15em;
+        margin-right: 0.15em;
+      }
+
+      .author-affiliation .loka-logo {
+        height: 2rem;
+        vertical-align: middle;
+      }
+
+      .post-date {
+        margin: 0.8rem 0 0;
+        font-family: var(--font-sans);
+        font-size: 0.88rem;
+        color: var(--fg-4);
+      }
+
+      .resource-links {
+        margin: 1rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        font-family: var(--font-sans);
+        font-size: 0.88rem;
+      }
+
+      .resource-links a {
+        color: var(--fg-3);
+        text-decoration: none;
+        border-bottom: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .resource-links a:hover {
+        color: var(--fg);
+      }
+
+      .resource-links .icon {
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+      }
+
+      .resource-links img.icon {
+        width: auto;
+        object-fit: contain;
+      }
+
+      .post-cover {
+        max-width: var(--max-wide);
+        margin: 2.2rem auto 2.5rem;
+      }
+
+      .post-cover img,
+      .post-cover svg {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 24px;
+      }
+
+      article.content {
+        max-width: var(--max-content);
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .left-toc {
+        position: sticky;
+        top: 2rem;
+        float: left;
+        margin-left: calc(-1 * var(--toc-width) - var(--toc-gap));
+        width: var(--toc-width);
+        font-size: 0.85rem;
+        line-height: 1.45;
+        max-height: calc(100vh - 4rem);
+        overflow-y: auto;
+      }
+
+      .toc-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border-left: 1px solid var(--line);
+      }
+
+      .toc-list a {
+        display: block;
+        padding: 0.2rem 0 0.2rem 0.85rem;
+        text-decoration: none;
+        color: var(--fg-4);
+        border-left: 2px solid transparent;
+        margin-left: -1px;
+        transition: color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .toc-list a:hover {
+        color: var(--fg-2);
+      }
+
+      .toc-list a.active {
+        color: var(--accent);
+        border-left-color: var(--accent);
+        font-weight: 500;
+      }
+
+      .content .toc-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .content .toc-list li {
+        margin: 0;
+        list-style: none;
+      }
+
+      .content .toc-list a {
+        text-decoration: none;
+      }
+
+      .content p,
+      .content ul,
+      .content ol,
+      .content pre,
+      .content blockquote,
+      .content table,
+      .content figure {
+        margin: 0 0 1.3rem;
+      }
+
+      .content h2,
+      .content h3,
+      .content h4 {
+        line-height: 1.3;
+        position: relative;
+      }
+
+      .content h2 {
+        margin: 2.8rem 0 0.9rem;
+        font-family: var(--font-sans);
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .content h3 {
+        margin: 2rem 0 0.7rem;
+        font-family: var(--font-sans);
+        font-size: 1.05rem;
+        font-style: normal;
+        font-weight: 500;
+        color: var(--fg-2);
+      }
+
+      .heading-anchor {
+        position: absolute;
+        left: -1.2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0;
+        text-decoration: none;
+        color: var(--fg-4);
+        font-weight: 400;
+        font-size: 0.85em;
+        transition: opacity 0.15s ease;
+      }
+
+      .content h2:hover .heading-anchor,
+      .content h3:hover .heading-anchor,
+      .heading-anchor:focus {
+        opacity: 1;
+      }
+
+      .content ul {
+        margin-left: 1.5rem;
+        padding: 0;
+        list-style: disc;
+      }
+
+      .content li {
+        margin-bottom: 0.25rem;
+      }
+
+      .content a {
+        text-decoration-color: var(--line-strong);
+        text-underline-offset: 2px;
+        transition: text-decoration-color 0.15s ease;
+      }
+
+      .content a:hover {
+        text-decoration-color: var(--fg);
+      }
+
+      .content code {
+        font-family: var(--font-mono);
+        font-size: 0.84em;
+        background: var(--bg-code);
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+      }
+
+      .content pre {
+        background: var(--bg-code);
+        border-radius: 4px;
+        overflow-x: auto;
+        padding: 0.9rem 1rem;
+        border: 1px solid var(--line);
+      }
+
+      .content pre code {
+        padding: 0;
+        background: none;
+        display: block;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        border-radius: 0;
+      }
+
+      .content table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      .content th,
+      .content td {
+        padding: 0.5rem 0.65rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .content th {
+        font-family: var(--font-sans);
+        font-weight: 500;
+        font-size: 0.82rem;
+        color: var(--fg-3);
+        border-bottom: 2px solid var(--line-strong);
+      }
+
+      .content tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .content figure {
+        margin-top: 1.6rem;
+      }
+
+      .content figure img,
+      .content figure svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .content figcaption {
+        margin-top: 0.5rem;
+        font-size: 0.88rem;
+        color: var(--fg-3);
+        font-style: italic;
+        text-align: center;
+      }
+
+      .figure-wide {
+        max-width: var(--max-wide);
+        margin-left: calc((var(--max-content) - var(--max-wide)) / 2);
+        margin-right: calc((var(--max-content) - var(--max-wide)) / 2);
+      }
+
+      .figure-wide canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+      }
+
+      .chart-frame {
+        position: relative;
+        width: 100%;
+        height: 340px;
+        max-height: 340px;
+        overflow: hidden;
+      }
+
+      .callout {
+        border-left: 3px solid var(--accent);
+        padding: 0.8rem 1.1rem;
+        margin-bottom: 1.3rem;
+        background: var(--bg-soft);
+      }
+
+      .callout strong {
+        font-family: var(--font-sans);
+        font-weight: 500;
+      }
+
+      .callout p:first-child {
+        margin-top: 0;
+      }
+
+      .callout p:last-child,
+      .callout ul:last-child {
+        margin-bottom: 0;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        gap: 0.8rem;
+        margin: 0.2rem 0 1.3rem;
+      }
+
+      .metric-card {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0.8rem;
+        background: var(--bg-soft);
+      }
+
+      .metric-label {
+        display: block;
+        font-family: var(--font-sans);
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-4);
+      }
+
+      .metric-value {
+        display: block;
+        margin-top: 0.25rem;
+        font-family: var(--font-sans);
+        font-size: 1.35rem;
+        font-weight: 500;
+        line-height: 1.2;
+      }
+
+      .output-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin: 1.3rem 0;
+      }
+
+      .output-box {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .output-box-header {
+        font-family: var(--font-sans);
+        font-size: 0.78rem;
+        font-weight: 500;
+        padding: 0.5rem 0.8rem;
+        border-bottom: 1px solid var(--line);
+        background: var(--bg-soft);
+      }
+
+      .output-box-header.good {
+        color: #166534;
+        background: #f0fdf4;
+        border-bottom-color: #bbf7d0;
+      }
+
+      .output-box-header.warn {
+        color: #92400e;
+        background: #fffbeb;
+        border-bottom-color: #fde68a;
+      }
+
+      .output-box-body {
+        padding: 0.8rem;
+        font-size: 0.82rem;
+        line-height: 1.55;
+        max-height: 260px;
+        overflow-y: auto;
+      }
+
+      .citation-block pre {
+        background: var(--bg-soft);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 0.8rem 1rem;
+        font-size: 0.78rem;
+        line-height: 1.5;
+        overflow-x: auto;
+      }
+
+      .references-list {
+        margin-left: 1.4rem;
+        padding: 0;
+        list-style: decimal;
+      }
+
+      .references-list li {
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        line-height: 1.65;
+        color: var(--fg-2);
+      }
+
+      .references-list li a {
+        display: inline-block;
+        margin-top: 0.1rem;
+        color: var(--link);
+        word-break: break-all;
+      }
+
+      .site-footer {
+        max-width: var(--max-content);
+        margin: 0 auto;
+        padding: 1.5rem 1.6rem 2rem;
+        font-family: var(--font-sans);
+        font-size: 0.82rem;
+        color: var(--fg-4);
+        text-align: center;
+        border-top: 1px solid var(--line);
+      }
+
+      .back-to-top {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--bg);
+        color: var(--fg-3);
+        border: 1px solid var(--line);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.25s ease, transform 0.25s ease, color 0.15s ease, border-color 0.15s ease;
+        z-index: 100;
+        font-size: 16px;
+        line-height: 1;
+      }
+
+      .back-to-top.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .back-to-top:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      @media (max-width: 1100px) {
+        .left-toc {
+          display: none;
+        }
+
+        .heading-anchor {
+          display: none;
+        }
+
+        .figure-wide {
+          max-width: var(--max-content);
+          margin-left: 0;
+          margin-right: 0;
+        }
+
+        .chart-frame {
+          height: 300px;
+          max-height: 300px;
+        }
+      }
+
+      @media print {
+        .reading-progress,
+        .back-to-top,
+        .left-toc,
+        .heading-anchor,
+        .resource-links { display: none !important; }
+
+        body { font-size: 15px; }
+
+        #main.post { padding: 0 1.2rem 2rem; max-width: 100%; }
+
+        .post-heading { margin-top: 1.5rem; }
+
+        .figure-wide {
+          max-width: 100% !important;
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+        }
+
+        .chart-frame { height: 260px; max-height: 260px; }
+
+        .output-comparison { grid-template-columns: 1fr 1fr; }
+
+        .content h2 { page-break-after: avoid; margin-top: 1.8rem; }
+        .content h3 { page-break-after: avoid; }
+
+        table { page-break-inside: avoid; }
+        figure { page-break-inside: avoid; }
+        .callout { page-break-inside: avoid; }
+
+        .content pre {
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+
+        a { color: inherit; text-decoration: none; }
+      }
+
+      @media (max-width: 768px) {
+        body {
+          font-size: 16px;
+        }
+
+        #main.post {
+          padding: 0 1.1rem 3rem;
+        }
+
+        .post-title {
+          font-size: 1.7rem;
+        }
+
+        .resource-links {
+          gap: 1rem;
+          font-size: 0.82rem;
+        }
+
+        .content h2 {
+          font-size: 1.3rem;
+        }
+
+        .content table {
+          display: block;
+          overflow-x: auto;
+          font-size: 0.8rem;
+        }
+
+        .content th,
+        .content td {
+          padding: 0.4rem 0.45rem;
+        }
+
+        .metric-grid,
+        .output-comparison {
+          grid-template-columns: 1fr;
+        }
+
+        .back-to-top {
+          bottom: 1.2rem;
+          right: 1.2rem;
+        }
+      }
+    </style>
+</head>
+<body>
+<div class="reading-progress" id="reading-progress"></div>
+<a id="top"></a>
+<div class="shell">
+<main class="post" id="main">
+<section class="post-heading">
+<h1 class="post-title">
+<span class="post-title-main">Running Hugging Face Carbon on AWS Trainium2</span>
+<span class="post-title-sub">A first NxD Inference benchmark for open DNA foundation models</span>
+</h1>
+<div class="authors">
+<div class="author-card">
+<span class="author-name"><a href="mailto:bojan.jakimovski@loka.com">Bojan Jakimovski</a></span>
+<span class="author-email"><a href="mailto:bojan.jakimovski@loka.com">bojan.jakimovski@loka.com</a></span>
+</div>
+<div class="author-card">
+<span class="author-name"><a href="https://www.loka.com/">Loka Applied Research</a></span>
+<span class="author-email"><a href="https://www.loka.com/">loka.com</a></span>
+</div>
+</div>
+<div class="author-affiliation">
+<a aria-label="Loka" href="https://www.loka.com/">
+<img alt="Loka" class="loka-logo" src="https://cdn.worldvectorlogo.com/logos/loka-1.svg"/>
+</a>
+</div>
+<p class="post-date">
+<time datetime="2026-05-20">May 20, 2026</time>
+</p>
+<ul class="resource-links">
+<li>
+<a aria-label="GitHub repository" href="https://github.com/LokaHQ/carbon-neuronx-distributed-inference">
+<svg class="icon" fill="currentColor" viewbox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+</a>
+</li>
+<li><a aria-label="Carbon on Hugging Face" href="https://huggingface.co/HuggingFaceBio/Carbon-3B"><img alt="Hugging Face" class="icon" src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"/></a></li>
+<li>
+<a aria-label="AWS Trainium" href="https://aws.amazon.com/ai/machine-learning/trainium/">
+<img alt="AWS" class="icon aws-logo-icon" src="assets/aws-logo.png"/>
+</a>
+</li>
+</ul>
+</section>
+<figure class="post-cover">
+<img alt="Carbon on Trainium2 with NxD Inference benchmark cover image." src="assets/carbon-trainium2-cover.png"/>
+</figure>
+<article class="content">
+<nav aria-label="Table of contents" class="left-toc">
+<ul class="toc-list">
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#carbon">What makes Carbon different</a></li>
+<li><a href="#why-trainium">Why Trainium2</a></li>
+<li><a href="#setup">Benchmark setup</a></li>
+<li><a href="#results">Results and analysis</a></li>
+<li><a href="#business">Bio &amp; HCLS impact</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#citation">Citation</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</nav>
+<h2 id="introduction">
+  Introduction
+  <a aria-label="Link to section" class="heading-anchor" href="#introduction">#</a>
+</h2>
+<p>
+  The Human Genome Project, completed in 2003, cost around
+  <a href="https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost">$3 billion</a> over 13 years to sequence the first human genome.
+  Today, the sequencing bill is measured in hundreds of dollars. That changes the problem. For many bio and HCLS teams,
+  the hard part is no longer getting enough sequence data. The hard part is turning that data into something useful:
+  variant effect prediction, regulatory annotation, gene expression modeling, therapeutic sequence design, and repeated
+  scoring runs that need to happen inside a secure cloud environment.
+</p>
+<p>
+  This is where DNA foundation models become interesting. The idea is simple enough: DNA is a sequence, and modern
+  foundation models are extremely good at learning from sequences. Models such as
+  <a href="https://arxiv.org/abs/2306.15794">HyenaDNA</a>, the
+  <a href="https://www.nature.com/articles/s41592-024-02523-z">Nucleotide Transformer</a>, and
+  <a href="https://arcinstitute.org/tools/evo">Evo2</a> showed that models trained on raw genomic sequence can learn
+  useful biological representations without hand-built feature pipelines. But many of these releases also came with a
+  practical catch: unusual architectures, closed or constrained access, large GPU requirements, or tokenization choices
+  that make long-context inference expensive.
+</p>
+<p>
+<a href="https://huggingface.co/spaces/HuggingFaceBio/carbon-demo">Carbon</a>, released by Hugging Face Bio, is a very
+  good step in the other direction. It is open, Apache 2.0, available in 500M, 3B, and 8B sizes, and trained on roughly
+  six trillion base pairs of eukaryotic genomic DNA, mRNA transcripts, and bacterial genomes. It uses a 6-mer tokenizer, so six DNA bases become one
+  model token, while Factorized Nucleotide Supervision keeps the training objective aware of base-level prediction.
+  Carbon-3B is reported to match <a href="https://arcinstitute.org/tools/evo">Evo2-7B</a> on key DNA benchmarks while
+  being smaller and much faster. For infrastructure teams, the biggest gift is even more practical: Carbon is built on a
+  familiar <a href="https://arxiv.org/abs/2407.21783">Llama 3</a>-style Transformer backbone.
+</p>
+<p>
+  That matters because a model card is not a production deployment. Bio teams usually want the model running inside an
+  AWS VPC, close to their data, with security and procurement teams comfortable with the path. They also need hardware
+  they can actually reserve. The A100-80GB reference used in the Carbon report is a strong baseline, but on AWS that
+  capacity is commonly exposed through larger nodes such as <code>p4de.24xlarge</code>. For a team that wants to test one
+  genomics model, that can mean reserving an 8-GPU node when the first workload does not need eight GPUs.
+</p>
+<p>
+  So when Carbon shipped, we tried the thing customers actually ask us about at Loka: can we take this fresh Hugging Face
+  checkpoint and make it run on AWS-native accelerator infrastructure without turning the first experiment into a custom
+  kernel project?
+</p>
+<p>
+  The answer was yes. On launch day, we ran Carbon-500M, Carbon-3B, and Carbon-8B on a single
+  <code>trn2.3xlarge</code> using <a href="https://github.com/aws-neuron/neuronx-distributed-inference">NxD Inference</a>:
+  one Trainium2 accelerator, 96 GB of accelerator memory, and a public Capacity Blocks rate of about
+  <a href="https://aws.amazon.com/ec2/capacityblocks/pricing/">$2.23/hr</a>, checked on May 21, 2026.
+  No model rewrite. No model-specific kernels.
+  A small tokenizer/config compatibility patch was enough for Carbon to ride the existing NxDI Llama causal path.
+</p>
+<p>
+  In the batch-16 sweep shaped after the
+  <a href="https://github.com/huggingface/carbon/blob/main/tech-report.pdf">Carbon technical report</a>'s A100 reference,
+  Carbon-500M reached <strong>18.83 kbp/s</strong>, Carbon-3B reached <strong>11.00 kbp/s</strong>, and Carbon-8B reached
+  <strong>8.21 kbp/s</strong>. This is not a final service benchmark and it is not a biological evaluation. It is something
+  more basic, and honestly more useful for executives: proof that the distance between an open model release and a
+  production-shaped AWS serving artifact is getting shorter.
+</p>
+<h2 id="carbon">
+  What makes Carbon different
+  <a aria-label="Link to section" class="heading-anchor" href="#carbon">#</a>
+</h2>
+<div class="callout"><p><strong>Why this section matters:</strong> Carbon is not “just another LLM for DNA.” It is open, it uses a familiar Llama-style backbone, and it adds the DNA-specific pieces where they actually matter: tokenization and training. That combination is what made a fast Trainium2 path possible.</p></div>
+<p>
+  The architecture is intentionally familiar: decoder-only autoregressive modeling, RMSNorm, SwiGLU, RoPE, GQA, and a
+  Llama-style causal path. That is not the most exotic design choice, and that is the point. In enterprise AI, boring
+  architecture is often a feature. It means the model has a better chance of working with the compilers, runtimes,
+  profiling tools, and deployment patterns that customers already trust.
+</p>
+<p>
+  The DNA-specific part is the tokenizer. Carbon uses non-overlapping 6-mer tokenization, so six nucleotides become one
+  model token. A 1080 base-pair input becomes roughly 180 DNA tokens in DNA mode. That compression is what makes long
+  genomic spans more practical on a standard Transformer backbone. Instead of paying attention cost on every single base,
+  the model can work over a shorter token sequence while still learning from nucleotide-level supervision during training.
+</p>
+<p>
+  The tradeoff is also worth being honest about. Single-base tokenization gives a cleaner interface, but it makes every
+  sequence six times longer. Carbon takes the more deployment-friendly route: compact 6-mer tokens, plus Factorized
+  Nucleotide Supervision to keep the model aware of base-level prediction. For this Trainium2 benchmark, we measured
+  direct 6-mer generation. FNS base-pair-level inference is the next obvious follow-up because it would make the
+  biological interface even cleaner.
+</p>
+<p>
+  This is the part we like the most about the release from Hugging Face Bio: Carbon is not only a benchmark result. It is a
+  model family that infrastructure teams can actually touch. The weights are open, the model cards are public, the sizes
+  are practical, and the architecture gives cloud teams a real shot at making it production-shaped without starting from
+  a blank page.
+</p>
+<p>
+  The table below summarizes the three Carbon sizes we tested. The main deployment-relevant difference is not only
+  parameter count, but also the attention shape: hidden size, layer count, attention heads, and KV heads all affect how
+  cleanly the model maps onto tensor parallel inference.
+</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Hidden</th>
+<th>Layers</th>
+<th>Attention heads</th>
+<th>KV heads</th>
+<th>Vocabulary</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Carbon-500M</td><td>1024</td><td>28</td><td>16</td><td>8</td><td>155,776</td></tr>
+<tr><td>Carbon-3B</td><td>3072</td><td>30</td><td>32</td><td>4</td><td>155,776</td></tr>
+<tr><td>Carbon-8B</td><td>4096</td><td>32</td><td>32</td><td>8</td><td>155,776</td></tr>
+</tbody>
+</table>
+<h2 id="why-trainium">
+  Why Trainium2
+  <a aria-label="Link to section" class="heading-anchor" href="#why-trainium">#</a>
+</h2>
+<p>
+  Bio workloads are not chat workloads with a lab label on top. They often involve private sequence data, long context,
+  repeated scoring, likelihood comparisons, perturbation sweeps, and compliance constraints. Cost matters, but so do data
+  locality, procurement shape, security review, and the ability to keep the model in the same AWS environment where the
+  rest of the platform already runs.
+</p>
+<p>
+  This is where <a href="https://aws.amazon.com/ai/machine-learning/trainium/">AWS Trainium2</a> deserves real praise.
+  It gives teams an AWS-native accelerator option that is purpose-built for deep learning, starts at a practical
+  one-chip instance size, and scales to larger Trn2 fleets when the workload is proven. For customers already building on
+  AWS, that is not a small detail. It means the accelerator strategy can fit the cloud strategy instead of forcing a
+  separate GPU-only operating model from day one.
+</p>
+<div class="callout"><p><strong>Why Trainium2 matters here:</strong> the value is not only lower cost. The value is having an AWS-native accelerator path that starts small, stays inside the customer environment, and can scale when the workload is real.</p></div>
+<p>
+  Carbon was a good test case because it is not a generic chat model, but it is shaped like one. Its configs advertise
+  <code>LlamaForCausalLM</code>. NxD Inference already has a strong Llama causal path. The bet was simple: if the tokenizer
+  and model config cooperate, Carbon should be able to use the existing NxDI path.
+</p>
+<p>
+  At Loka, this is the question we hear whenever a serious open model ships: not only “is the model good?”, but “how fast
+  can we stand it up on infrastructure we already operate, at a cost we can explain to procurement?” Carbon gave us a
+  clean way to answer that question on real Trainium2 hardware.
+</p>
+<p>
+  The timing also fits the broader AWS BioFM story. In April 2026, AWS published a
+  <a href="https://aws.amazon.com/blogs/machine-learning/applying-multimodal-biological-foundation-models-across-therapeutics-and-patient-care/">multimodal biological foundation-model overview</a>
+  that describes BioFM adoption as a combination of model development, governed biological data, scalable infrastructure,
+  and implementation support. Importantly for us, AWS also names Loka alongside Deloitte and Accenture as implementation
+  partners for organizations moving multimodal BioFM work from proof-of-concept to production. Carbon on Trainium2 is a
+  very concrete example of that motion: an open Hugging Face Bio model, running on AWS accelerator infrastructure, with
+  cost, throughput, and deployment details that enterprise teams can actually evaluate.
+</p>
+<h2 id="setup">
+  Benchmark setup
+  <a aria-label="Link to section" class="heading-anchor" href="#setup">#</a>
+</h2>
+<p>
+  We ran the benchmark on a single <code>trn2.3xlarge</code>. The instance exposes one Trainium2 device, four logical
+  NeuronCores, and 96 GB of accelerator memory. The run used tensor parallel degree 4, BF16 weights, batch size 1,
+  on-device sampling, and NxDI bucketing.
+</p>
+<p>
+  The main benchmark shape mirrors the Carbon report's Figure 1 framing: 1080 base pairs for prefill and 1080 base pairs
+  for decode. With 6-mer DNA tokenization, that is about 180 input tokens and 180 generated tokens. We compiled a
+  512-token artifact with a 256-token context bucket and a 180-token decode budget. The setup table below captures the
+  exact runtime, parallelism, and prompt shape used for the fixed-shape run.
+</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Instance</td><td><code>trn2.3xlarge</code></td></tr>
+<tr><td>Accelerator</td><td>1 Trainium2 device, 4 logical NeuronCores, <code>LNC=2</code></td></tr>
+<tr><td>Runtime</td><td>PyTorch 2.9.1, torch-neuronx 2.9.0, torch-xla 2.9.0, Neuron SDK 2.29 stack</td></tr>
+<tr><td>NxDI</td><td><code>neuronx-distributed-inference==0.9.0</code></td></tr>
+<tr><td>Parallelism</td><td><code>tp_degree=4</code>, <code>batch_size=1</code></td></tr>
+<tr><td>Shape</td><td><code>max_context_length=256</code>, <code>seq_len=512</code>, <code>max_new_tokens=180</code></td></tr>
+<tr><td>Prompt</td><td>1080 bp sequence wrapped as <code>&lt;dna&gt;...&lt;/dna&gt;</code> for the fixed-shape run</td></tr>
+</tbody>
+</table>
+<h2 id="results">
+  Results and analysis
+  <a aria-label="Link to section" class="heading-anchor" href="#results">#</a>
+</h2>
+<p>
+  The headline result is compatibility. All three Carbon checkpoints compiled and ran through NxDI with tokenizer
+  handling plus a small compatibility/config patch. That is exactly what you want from a standard architecture: a domain
+  model from Hugging Face Bio, running through a general AWS inference stack, without waiting for a bespoke serving path.
+</p>
+<h3>Fixed-shape NxDI throughput</h3>
+<p>
+  We first measured compiled NxDI artifacts with the fixed report-shaped configuration. These numbers separate context
+  encoding, token generation, and end-to-end behavior under one static shape, so they are useful for infrastructure
+  comparison and future optimization work. The fixed-shape results table below reports compile/load time, context encode,
+  token generation, and end-to-end latency for each model size.
+</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Compile + trace</th>
+<th>Load</th>
+<th>CTE p50</th>
+<th>TKG p50</th>
+<th>TKG throughput</th>
+<th>E2E p50</th>
+<th>E2E throughput</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Carbon-500M</td><td>69.73 s</td><td>7.74 s</td><td>5.49 ms</td><td>3.35 ms</td><td>297.0 tok/s</td><td>693.76 ms</td><td>737.5 tok/s</td></tr>
+<tr><td>Carbon-3B</td><td>96.54 s</td><td>9.27 s</td><td>13.14 ms</td><td>6.68 ms</td><td>150.2 tok/s</td><td>1299.10 ms</td><td>394.4 tok/s</td></tr>
+<tr><td>Carbon-8B</td><td>144.33 s</td><td>10.25 s</td><td>18.90 ms</td><td>8.32 ms</td><td>120.4 tok/s</td><td>1604.55 ms</td><td>319.2 tok/s</td></tr>
+</tbody>
+</table>
+<figure class="figure-wide">
+<div class="chart-frame">
+<canvas id="chart-throughput"></canvas>
+</div>
+<figcaption>
+              Figure 1. Fixed-shape NxDI throughput on <code>trn2.3xlarge</code>. Token generation
+              throughput is the most relevant number for autoregressive decode; end-to-end throughput
+              reflects the compiled benchmark harness shape.
+            </figcaption>
+</figure>
+<p>
+  The scaling pattern is healthy. Carbon-500M is fast, Carbon-3B is comfortable on a single small Trainium2 instance, and
+  Carbon-8B fits and runs with useful latency before any model-specific optimization work. For a first-pass enterprise
+  test, that is the important part: the serving path works and the numbers are usable.
+</p>
+<h3>DNA prompt suite</h3>
+<p>
+  A fixed-shape benchmark is useful, but it does not tell the whole story. We also ran a seven-prompt DNA suite using
+  1080 bp prompts: balanced DNA, CpG-rich, AT-rich, GC-rich, ORF-like, TATA-box-like, and CAG triplet-repeat. Each model
+  ran one warmup and two measured runs per case, for 14 measured generations per model. The DNA-suite table below reports
+  the median latency and throughput, plus a simple valid-DNA check on decoded A/C/G/T output.
+</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Median elapsed</th>
+<th>Median token throughput</th>
+<th>Median bp throughput</th>
+<th>Avg valid DNA</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Carbon-500M</td><td>0.689 s</td><td>261.3 tok/s</td><td>1568 bp/s</td><td>100.0%</td></tr>
+<tr><td>Carbon-3B</td><td>1.277 s</td><td>140.9 tok/s</td><td>846 bp/s</td><td>100.0%</td></tr>
+<tr><td>Carbon-8B</td><td>1.589 s</td><td>113.3 tok/s</td><td>679 bp/s</td><td>99.0%</td></tr>
+</tbody>
+</table>
+<figure class="figure-wide">
+<div class="chart-frame">
+<canvas id="chart-dna-suite"></canvas>
+</div>
+<figcaption>
+              Figure 2. Median base-pair throughput for 1080 bp decode across seven DNA prompt
+              regimes. Base-pair throughput is computed from decoded A/C/G/T characters, not assumed
+              from token count.
+            </figcaption>
+</figure>
+<p>
+  Carbon-500M and Carbon-3B generated 1080 valid base pairs in every prompt case. Carbon-8B did the same for six out of
+  seven cases. On the CAG triplet-repeat stress case, 180 generated tokens decoded to 963 A/C/G/T characters because
+  part of the output moved outside pure DNA vocabulary. That is not a Trainium issue, but it is a useful measurement
+  caveat: base-pair throughput is cleanest when generation stays in DNA mode.
+</p>
+<h3 id="a100-reference">Comparison with the A100 baseline</h3>
+<p>
+  Hugging Face Bio reports an A100 reference point in the Carbon technical report. The appendix measures Carbon-3B and
+  Carbon-8B on a single A100-80GB with vLLM dynamic batching, <code>n=16</code> prompts, and a 1 kbp output. We reran our
+  Trainium2 benchmark with the same high-level workload shape: <code>n=16</code>, 1020 bp prompts, 1020 bp generated DNA
+  per prompt, direct 6-mer generation, and greedy decoding. The comparison table below puts the published A100 reference
+  beside our Trainium2 batch-16 run.
+</p>
+<p>
+  This is not a perfect accelerator shootout. The A100 baseline uses vLLM dynamic batching. Our Trainium2 run uses a
+  static compiled NxDI batch on one <code>trn2.3xlarge</code>. The useful reading is operational: how much of the published
+  GPU throughput can a small AWS-native Trainium2 instance recover immediately after a model release?
+</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>HF A100-80GB direct 6-mer</th>
+<th>HF A100-80GB FNS bp-level</th>
+<th>Our Trainium2 direct 6-mer</th>
+<th>Trainium / A100 direct</th>
+<th>Harness note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Carbon-3B</td>
+<td>18.9 kbp/s</td>
+<td>12.3 kbp/s</td>
+<td>11.00 kbp/s</td>
+<td>58.2%</td>
+<td>A100: vLLM dynamic batch 16; Trainium2: NxDI static batch 16</td>
+</tr>
+<tr>
+<td>Carbon-8B</td>
+<td>12.0 kbp/s</td>
+<td>12.3 kbp/s</td>
+<td>8.21 kbp/s</td>
+<td>68.4%</td>
+<td>A100: vLLM dynamic batch 16; Trainium2: NxDI static batch 16</td>
+</tr>
+</tbody>
+</table>
+<figure class="figure-wide">
+<div class="chart-frame">
+<canvas id="chart-a100-reference"></canvas>
+</div>
+<figcaption>
+              Figure 3. Published Carbon A100-80GB throughput from the technical report compared
+              with our Trainium2 batch-16 measurements. This is a reference comparison, not
+              a controlled accelerator shootout.
+            </figcaption>
+</figure>
+<div class="callout"><p><strong>Fair reading:</strong> A100 plus vLLM is a strong optimized baseline. Trainium2 plus NxDI is the day-one AWS portability result. The important part is that Carbon-3B and Carbon-8B reached useful throughput on a single <code>trn2.3xlarge</code>, without turning the first experiment into a larger GPU deployment.</p></div>
+<h3 id="cost">Cost-normalized throughput</h3>
+<p>
+  Throughput only becomes useful for a business when it meets the buying motion. This is where the Trainium2 shape is
+  important. As checked on May 21, 2026, AWS lists <code>trn2.3xlarge</code> Capacity Blocks at
+  <strong>$2.235 per instance-hour</strong> for one
+  Trainium2 accelerator. The larger <code>trn2.48xlarge</code> keeps the same listed per-accelerator rate at
+  <strong>$35.7608/hr</strong> for 16 Trainium2 accelerators. That is a clean path for a team: start with one 96 GB
+  accelerator, prove the model, then scale the same Neuron/NxDI stack when the workload is real.
+</p>
+<p>
+  The A100 reference in the Carbon report is a single A100-80GB. On AWS, that class of capacity is commonly bought as a
+  larger node such as <code>p4de.24xlarge</code>. The same May 21, 2026 Capacity Blocks pricing lists that node at
+  <strong>$14.7663/hr</strong> for eight A100 accelerators. Normalizing that by eight GPUs is useful when a company already
+  has a mature GPU fleet and can keep the whole node busy. It is less useful for a first genomics service, where the
+  practical question is usually simpler: “What is the smallest serious accelerator unit we can reserve and defend?”
+</p>
+<div aria-label="Cost headline metrics" class="metric-grid">
+<div class="metric-card">
+<span class="metric-label">Smallest serious start</span>
+<span class="metric-value">$2.235/hr</span>
+</div>
+<div class="metric-card">
+<span class="metric-label">Full A100 node floor</span>
+<span class="metric-value">$14.77/hr</span>
+</div>
+<div class="metric-card">
+<span class="metric-label">Carbon-3B first-service view</span>
+<span class="metric-value">$56 vs $217/Gbp</span>
+</div>
+<div class="metric-card">
+<span class="metric-label">Carbon-8B first-service view</span>
+<span class="metric-value">$76 vs $342/Gbp</span>
+</div>
+</div>
+<p>
+  For this dollar-per-gigabase comparison, we only include Carbon-3B and Carbon-8B. Hugging Face Bio publishes the A100
+  reference points for those two models in the report table we used, but not for Carbon-500M. Carbon-500M is still a very
+  useful Trainium2 result, especially for high-volume scanning and quick experiments, but adding it to the A100 comparison
+  would make the chart look more complete than the evidence actually is. The cost table below uses the public Capacity
+  Blocks rates above and should be read as a planning view, not a universal price/performance ranking.
+</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Measured bp/s on Trainium2</th>
+<th>Base pairs / hour</th>
+<th>30-day base pairs</th>
+<th>Trainium2 cost / Gbp</th>
+<th>A100 full-node floor / Gbp</th>
+<th>A100 full-utilization normalized / Gbp</th>
+<th>Mbp / dollar on Trainium2</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>Carbon-3B</td><td>10,998</td><td>39.59M</td><td>28.51B</td><td>$56</td><td>$217</td><td>$27</td><td>17.7</td></tr>
+<tr><td>Carbon-8B</td><td>8,212</td><td>29.56M</td><td>21.29B</td><td>$76</td><td>$342</td><td>$43</td><td>13.2</td></tr>
+</tbody>
+</table>
+<figure class="figure-wide">
+<div class="chart-frame">
+<canvas id="chart-cost"></canvas>
+</div>
+<figcaption>
+              Figure 4. Cost-normalized DNA generation throughput for Carbon-3B and Carbon-8B.
+              Trainium2 uses AWS's published <code>trn2.3xlarge</code> Capacity Blocks rate of
+              $2.235/hour, checked on May 21, 2026. The A100 full-node floor assumes a <code>p4de.24xlarge</code> reservation is
+              used for one Carbon workload. The normalized A100 line divides that node by eight GPUs
+              and assumes perfect utilization across all accelerators. Carbon-500M is intentionally
+              excluded because the Carbon report table used here does not publish the matching A100
+              reference point for that model.
+            </figcaption>
+</figure>
+<p>
+  The commercial reading is not “Trainium2 beats A100 in every possible view.” That would be the wrong claim. If a company
+  already owns or reserves an A100 fleet and can keep every GPU saturated, the normalized GPU economics are strong. The
+  same caveat applies beyond this AWS comparison: H100, H200, and GB200 capacity from AWS or specialized GPU clouds can be
+  very competitive when the workload, discounts, availability, and utilization line up. We did not benchmark those options
+  here. The Trainium2 win in this post is the starting shape: a one-chip AWS accelerator with 96 GB of memory, a direct path to a 16-chip
+  Trn2 fleet, and a Neuron/NxDI stack that ran Carbon on day one. For CTOs and platform buyers, that is the difference
+  between a model that is interesting in a report and a model that can be tested inside the real AWS environment quickly.
+</p>
+<div class="callout"><p><strong>What the numbers say:</strong> Carbon runs, the output is mostly clean DNA, and the throughput is already useful for early production planning. These are not final service economics, but they are enough to justify the next step: testing Carbon inside the customer’s own AWS environment.</p></div>
+<p>
+  One more engineering note: Carbon-3B is the cleanest fit under TP=4 because its 4 KV heads align exactly to the
+  tensor-parallel degree. Carbon-500M and Carbon-8B trigger a GQA-to-MHA sharding fallback, but both compile and produce
+  correct output. Across all three sizes, the plain BF16 NxDI configuration was the best measured setup. No custom kernels
+  were needed for this first pass.
+</p>
+<p>
+  That leaves obvious headroom. These numbers are the baseline we got from the standard NxDI path, not the ceiling for
+  Trainium2. The next optimization pass is where Neuron-specific work starts to matter: tighter bucketing, better serving
+  shapes, and potentially NKI kernels for hot paths such as attention, projections, RoPE, or normalization. In other
+  words, the current result already makes Trainium2 credible for Carbon, and the AWS stack still gives us engineering
+  room to push the throughput and latency further.
+</p>
+<h2 id="business">
+  Why this matters for bio and HCLS
+  <a aria-label="Link to section" class="heading-anchor" href="#business">#</a>
+</h2>
+<p>
+  For bio and HCLS leaders, this is not really a story about a model demo. It is a story about reducing the distance
+  between scientific AI and a deployment path that a real enterprise can approve. A fresh open genomic model moved onto
+  AWS-native accelerator infrastructure in a day, with numbers, caveats, and a buying shape that CTOs, platform leaders,
+  security teams, and commercial buyers can reason about.
+</p>
+<p>
+  Hugging Face deserves credit for making Carbon a practical open release, not just a research announcement. Open weights,
+  public model cards, and an inspectable path give customers more control over fine-tuning, continued pretraining,
+  auditing, and deployment. In biology, that matters because sensitive sequence workflows cannot always be sent to a
+  black-box endpoint.
+</p>
+<p>
+  AWS deserves credit for giving those teams a serious deployment lane. Trainium2 provides the accelerator. Neuron and NxD
+  Inference provide the software layer. The AWS environment provides the security boundary, networking, IAM, procurement,
+  and operational controls that enterprise teams already know how to use. Together, that makes open bio models much easier
+  to move from slideware to a production-shaped proof.
+</p>
+<p>
+  Put Hugging Face Bio, Carbon, AWS Trainium2, and NxD Inference together, and the question changes. It is no longer “can
+  we even run this model?” It becomes “which latency, throughput, and cost point do we want for sequence generation,
+  variant scoring, or perturbation sweeps?” That is a much better conversation for a CTO or CEO, because it turns the
+  model from an interesting artifact into an infrastructure decision.
+</p>
+<div class="callout"><p><strong>Where Loka fits:</strong> this is the bridge we care about: take a strong open model, make it run on AWS infrastructure, measure it honestly, and turn it into something a customer can evaluate with security, cost, and procurement in the room.</p></div>
+<h2 id="conclusion">
+  Conclusion
+  <a aria-label="Link to section" class="heading-anchor" href="#conclusion">#</a>
+</h2>
+<p>
+  The core result is simple: Carbon runs on Trainium2 through NxD Inference today. Not after a model rewrite. Not after
+  model-specific kernels. Today, with tokenizer handling, a small compatibility patch, and the existing Llama causal path.
+</p>
+<p>
+  That is good for Hugging Face because it shows the value of releasing open biology models in a form that infrastructure
+  teams can actually adopt. It is good for AWS because it shows Trainium2 and NxDI can carry a fresh, domain-specific
+  model without waiting for a long porting cycle. And it is good for bio and HCLS teams because it lowers the cost and
+  friction of the first real deployment conversation.
+</p>
+<p>
+  The numbers are already useful: Carbon-500M reaches 1,568 bp/s, Carbon-3B reaches 846 bp/s, and Carbon-8B reaches
+  679 bp/s in the batch-1 prompt suite. In the A100-style batch-16 sweep, the same instance reaches 18.83 kbp/s,
+  11.00 kbp/s, and 8.21 kbp/s respectively at $2.235/hr. The caveats are real, and this is still before the deeper
+  Trainium2 optimization work: improved serving shapes, tighter NxDI tuning, and NKI kernels can all move these numbers
+  in the right direction. But the bigger takeaway is clear: <strong>the bottleneck for genomic AI is increasingly the gap
+  between an open model release and a production-grade serving artifact. With Carbon, Trainium2, and NxD Inference,
+  that gap got shorter.</strong>
+</p>
+<p>
+  If you are building with open bio models and need them running in production on AWS,
+  <a href="https://www.loka.com/">reach out to Loka</a>. This is exactly the problem we work on.
+</p>
+<div class="callout"><p><strong>Want the code-side walkthrough?</strong> We also prepared a companion engineering post that goes deeper on the tokenizer handling, NxD Inference compile path, benchmark harness, and optimization variants. Read it on <a href="https://medium.com/loka-engineering/running-hugging-faces-carbon-on-aws-trainium2-with-nxd-inference-ecdee6c2f4ce?postPublishedType=repub">Loka Engineering on Medium</a>, or inspect the benchmark package in the <a href="https://github.com/LokaHQ/carbon-neuronx-distributed-inference">public GitHub repository</a>.</p></div>
+<div class="callout"><p><strong>A small thank-you:</strong> sincere thanks to Petar Kalinovski, Henrique Ribeiro Delgado da Silva, Tiago Gonçalves, João Correia, Telmo Felgueira, Pedro Dias, and Zafir Stojanovski for taking the time to review, sanity-check, and sharpen this work before it went out.</p></div>
+<h2 id="citation">
+            Citation
+            <a aria-label="Link to section" class="heading-anchor" href="#citation">#</a>
+</h2>
+<div class="citation-block">
+<pre><code>@misc{loka_carbon_trainium2_2026,
+  title  = {Running Hugging Face Carbon on AWS Trainium2 with NxD Inference},
+  author = {Bojan Jakimovski and Loka Applied Research},
+  year   = {2026},
+  month  = {May},
+  url    = {https://loka.com/}
+}</code></pre>
+</div>
+<h2 id="references">
+            References
+            <a aria-label="Link to section" class="heading-anchor" href="#references">#</a>
+</h2>
+<ol class="references-list">
+<li id="ref-carbon-report">
+              Hugging Face Bio (2026).
+              <em>Carbon: Open DNA Foundation Models.</em>
+              Technical report covering the 6-mer tokenization design, Factorized Nucleotide
+              Supervision, pretraining setup, and benchmark comparisons for all three model sizes.
+              <a href="https://github.com/huggingface/carbon/blob/main/tech-report.pdf">github.com/huggingface/carbon</a>
+</li>
+<li id="ref-carbon-demo">
+              Hugging Face Bio (2026).
+              <em>Carbon interactive demo and technical narrative.</em>
+              Public Carbon release page covering open weights, open code, the 6-mer tokenizer,
+              long-context extension, throughput framing, and the live DNA generation demo.
+              <a href="https://huggingface.co/spaces/HuggingFaceBio/carbon-demo">huggingface.co/spaces/HuggingFaceBio/carbon-demo</a>
+</li>
+<li id="ref-carbon-models">
+              Hugging Face Bio (2026).
+              <em>Carbon-500M, Carbon-3B, and Carbon-8B model cards.</em>
+              Open-weight checkpoints and tokenizer code on Hugging Face Hub.
+              <a href="https://huggingface.co/HuggingFaceBio/Carbon-500M">huggingface.co/HuggingFaceBio/Carbon-500M</a>
+              ·
+              <a href="https://huggingface.co/HuggingFaceBio/Carbon-3B">huggingface.co/HuggingFaceBio/Carbon-3B</a>
+              ·
+              <a href="https://huggingface.co/HuggingFaceBio/Carbon-8B">huggingface.co/HuggingFaceBio/Carbon-8B</a>
+</li>
+<li id="ref-nxdi">
+              AWS Neuron (2024).
+              <em>NxD Inference: NeuronX Distributed Inference.</em>
+              Open-source library for deploying large language models on AWS Trainium and
+              Inferentia accelerators, including tensor-parallel and bucketed autoregressive
+              serving via the NxDI Llama causal path.
+              <a href="https://github.com/aws-neuron/neuronx-distributed-inference">github.com/aws-neuron/neuronx-distributed-inference</a>
+</li>
+<li id="ref-vllm">
+              Kwon, W., Li, Z., Zhuang, S., Sheng, Y., Zheng, L., Yu, C. H., Gonzalez, J. E., Zhang, H., &amp; Stoica, I. (2023).
+              <em>Efficient Memory Management for Large Language Model Serving with PagedAttention.</em>
+              Proceedings of the 29th Symposium on Operating Systems Principles (SOSP 2023).
+              The inference engine used in the Carbon technical report's A100-80GB baseline measurements;
+              the direct 6-mer and FNS throughput figures compared in this post were generated with vLLM dynamic batching.
+              <a href="https://arxiv.org/abs/2309.06180">arxiv.org/abs/2309.06180</a>
+</li>
+<li id="ref-neuron-sdk">
+              AWS (2024).
+              <em>AWS Neuron SDK documentation.</em>
+              Official documentation for compiling, profiling, and serving models on the
+              Neuron runtime, covering both Trainium and Inferentia generations.
+              <a href="https://awsdocs-neuron.readthedocs-hosted.com/">awsdocs-neuron.readthedocs-hosted.com</a>
+</li>
+<li id="ref-trainium">
+              AWS (2024).
+              <em>AWS Trainium and Trainium2.</em>
+              Amazon EC2 accelerator chip family purpose-built for deep learning training
+              and inference workloads at scale.
+              <a href="https://aws.amazon.com/ai/machine-learning/trainium/">aws.amazon.com/ai/machine-learning/trainium</a>
+</li>
+<li id="ref-aws-biofm">
+              AWS (2026).
+              <em>Applying multimodal biological foundation models across therapeutics and patient care.</em>
+              AWS overview of BioFM use cases, AWS infrastructure layers, and implementation
+              partners for moving BioFM proof-of-concepts toward production.
+              <a href="https://aws.amazon.com/blogs/machine-learning/applying-multimodal-biological-foundation-models-across-therapeutics-and-patient-care/">aws.amazon.com/blogs/machine-learning</a>
+</li>
+<li id="ref-capacity-blocks">
+              AWS (2026).
+              <em>Amazon EC2 Capacity Blocks for ML pricing.</em>
+              Published per-instance pricing for reserved ML capacity. Rates used in this analysis were checked
+              on May 21, 2026: <code>trn2.3xlarge</code> at $2.235/hr in ap-southeast-2 (Melbourne),
+              <code>trn2.48xlarge</code> at $35.7608/hr in us-east-2 (Ohio), and <code>p4de.24xlarge</code>
+              at $14.7663/hr in US East/US West regions where listed.
+              <a href="https://aws.amazon.com/ec2/capacityblocks/pricing/">aws.amazon.com/ec2/capacityblocks/pricing</a>
+</li>
+<li id="ref-nki">
+              AWS Neuron (2026).
+              <em>NKI samples and NKI library kernels.</em>
+              Public examples and references for optimized Neuron kernels, including attention,
+              projection, RoPE, and normalization paths relevant to future Carbon optimization work.
+              <a href="https://github.com/aws-neuron/nki-samples">github.com/aws-neuron/nki-samples</a>
+</li>
+<li id="ref-rmsnorm">
+              Zhang, B., &amp; Sennrich, R. (2019).
+              <em>Root Mean Square Layer Normalization.</em>
+              NeurIPS 2019. Introduces RMSNorm as a computationally efficient alternative to
+              standard layer normalization; used in Carbon's Transformer backbone.
+              <a href="https://arxiv.org/abs/1910.07467">arxiv.org/abs/1910.07467</a>
+</li>
+<li id="ref-swiglu">
+              Shazeer, N. (2020).
+              <em>GLU Variants Improve Transformer.</em>
+              Foundational work on Gated Linear Unit variants including SwiGLU, the activation
+              function used in Carbon's feed-forward layers.
+              <a href="https://arxiv.org/abs/2002.05202">arxiv.org/abs/2002.05202</a>
+</li>
+<li id="ref-rope">
+              Su, J., Lu, Y., Pan, S., Murtadha, A., Wen, B., &amp; Liu, Y. (2021).
+              <em>RoFormer: Enhanced Transformer with Rotary Position Embedding.</em>
+              Introduces RoPE (Rotary Position Embedding), the positional encoding scheme
+              used in Carbon's attention layers.
+              <a href="https://arxiv.org/abs/2104.09864">arxiv.org/abs/2104.09864</a>
+</li>
+<li id="ref-llama3">
+              Grattafiori, A., Dubey, A., et al. (2024).
+              <em>The Llama 3 Herd of Models.</em>
+              Meta AI. Introduces the Llama 3 model family and the decoder-only Transformer
+              architecture that Carbon adopts as its backbone, enabling compatibility with
+              standard inference runtimes including NxD Inference.
+              <a href="https://arxiv.org/abs/2407.21783">arxiv.org/abs/2407.21783</a>
+</li>
+<li id="ref-gqa">
+              Ainslie, J., Lee-Thorp, J., de Jong, M., Zemlyanskiy, Y., Lebrón, F., &amp; Sanghai, S. (2023).
+              <em>GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints.</em>
+              EMNLP 2023. Introduces Grouped-Query Attention, the attention variant used by
+              Carbon and handled by NxDI's GQA sharding path.
+              <a href="https://arxiv.org/abs/2305.13245">arxiv.org/abs/2305.13245</a>
+</li>
+<li id="ref-hyenadna">
+              Nguyen, E., Poli, M., Faizi, M., Thomas, A., Birch-Sykes, C., Wornow, M., et al. (2023).
+              <em>HyenaDNA: Long-Range Genomic Sequence Modeling at Single Nucleotide Resolution.</em>
+              NeurIPS 2023. Long-context DNA modeling at single-nucleotide resolution;
+              useful context for understanding the tokenization tradeoffs in Carbon's 6-mer design.
+              <a href="https://arxiv.org/abs/2306.15794">arxiv.org/abs/2306.15794</a>
+</li>
+<li id="ref-nucleotide-transformer">
+              Dalla-Torre, H., Gonzalez, L., Mendoza-Revilla, J., et al. (2025).
+              <em>The Nucleotide Transformer: Building and Evaluating Robust Foundation Models for Human Genomics.</em>
+              Nature Methods 22, 287-297 (2025). Transformer-based DNA foundation model from InstaDeep, Nvidia, and Technical University of Munich;
+              part of the landscape of genomic sequence models that Carbon addresses with its
+              efficiency-first 6-mer design.
+              <a href="https://www.nature.com/articles/s41592-024-02523-z">nature.com/articles/s41592-024-02523-z</a>
+</li>
+<li id="ref-evo2">
+              Arc Institute (2025).
+              <em>Evo 2: Genome-scale foundation model at single-nucleotide resolution.</em>
+              Long-context DNA foundation model; the primary throughput and capability baseline
+              cited in the Carbon technical report. Carbon-3B matches Evo2-7B on variant effect
+              prediction and long-context benchmarks while being 2.3× smaller and running more
+              than 150× faster.
+              <a href="https://arcinstitute.org/tools/evo">arcinstitute.org/tools/evo</a>
+</li>
+<li id="ref-nhgri-sequencing-cost">
+              National Human Genome Research Institute (NHGRI).
+              <em>The Cost of Sequencing a Human Genome.</em>
+              NHGRI fact sheet tracking the historical decline in human genome sequencing costs,
+              from the ~$3 billion Human Genome Project to sub-$1,000 whole-genome sequencing;
+              the original cost context cited in the introduction.
+              <a href="https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost">genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost</a>
+</li>
+</ol>
+</article>
+</main>
+<footer class="site-footer">
+        Bojan Jakimovski · Loka AI Engineering ·
+        <img alt="Loka" class="loka-logo" src="https://cdn.worldvectorlogo.com/logos/loka-1.svg"/>· 2026
+      </footer>
+</div>
+<button aria-label="Back to top" class="back-to-top" id="back-to-top" type="button">^</button>
+<script>
+      (function () {
+        var progress = document.getElementById("reading-progress");
+        var backToTop = document.getElementById("back-to-top");
+        var tocLinks = document.querySelectorAll(".toc-list a");
+        var sections = [];
+
+        tocLinks.forEach(function (link) {
+          var el = document.querySelector(link.getAttribute("href"));
+          if (el) sections.push({ el: el, link: link });
+        });
+
+        function updateProgress() {
+          var scrollTop = window.scrollY || document.documentElement.scrollTop;
+          var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+          var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+          progress.style.width = pct + "%";
+          if (scrollTop > 500) {
+            backToTop.classList.add("visible");
+          } else {
+            backToTop.classList.remove("visible");
+          }
+        }
+
+        function updateToc() {
+          var pos = window.scrollY + 120;
+          var current = sections[0];
+          for (var i = sections.length - 1; i >= 0; i--) {
+            if (sections[i].el.offsetTop <= pos) {
+              current = sections[i];
+              break;
+            }
+          }
+          tocLinks.forEach(function (link) {
+            link.classList.remove("active");
+          });
+          if (current) current.link.classList.add("active");
+        }
+
+        window.addEventListener("scroll", function () {
+          updateProgress();
+          updateToc();
+        });
+
+        backToTop.addEventListener("click", function () {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        updateProgress();
+        updateToc();
+      })();
+
+      Chart.defaults.font.family = '"GT America", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      Chart.defaults.color = "#333";
+      Chart.defaults.animation = false;
+
+      function chartOptions(yTitle) {
+        return {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } },
+            tooltip: { mode: "index", intersect: false }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: yTitle },
+              grid: { color: "#eeeeee" }
+            }
+          }
+        };
+      }
+
+      new Chart(document.getElementById("chart-throughput"), {
+        type: "bar",
+        data: {
+          labels: ["Carbon-500M", "Carbon-3B", "Carbon-8B"],
+          datasets: [
+            {
+              label: "E2E throughput (tok/s)",
+              data: [737.5, 394.4, 319.2],
+              backgroundColor: "#1877f2",
+              borderColor: "#1877f2",
+              borderWidth: 0
+            },
+            {
+              label: "Token generation throughput (tok/s)",
+              data: [297.0, 150.2, 120.4],
+              backgroundColor: "#14b8a6",
+              borderColor: "#14b8a6",
+              borderWidth: 0
+            }
+          ]
+        },
+        options: chartOptions("Tokens per second")
+      });
+
+      new Chart(document.getElementById("chart-dna-suite"), {
+        type: "bar",
+        data: {
+          labels: ["Carbon-500M", "Carbon-3B", "Carbon-8B"],
+          datasets: [
+            {
+              label: "Median DNA throughput (bp/s)",
+              data: [1568, 846, 679],
+              backgroundColor: "#22c55e",
+              borderColor: "#22c55e",
+              borderWidth: 0
+            },
+            {
+              label: "Median generated token throughput (tok/s)",
+              data: [261.3, 140.9, 113.3],
+              backgroundColor: "#8b5cf6",
+              borderColor: "#8b5cf6",
+              borderWidth: 0
+            }
+          ]
+        },
+        options: chartOptions("Throughput")
+      });
+
+      new Chart(document.getElementById("chart-a100-reference"), {
+        type: "bar",
+        data: {
+          labels: ["Carbon-3B", "Carbon-8B"],
+          datasets: [
+            {
+              label: "HF A100-80GB direct 6-mer (kbp/s)",
+              data: [18.9, 12.0],
+              backgroundColor: "#6b7280",
+              borderColor: "#6b7280",
+              borderWidth: 0
+            },
+            {
+              label: "HF A100-80GB FNS bp-level (kbp/s)",
+              data: [12.3, 12.3],
+              backgroundColor: "#1877f2",
+              borderColor: "#1877f2",
+              borderWidth: 0
+            },
+            {
+              label: "Our Trainium2 direct 6-mer batch 16 (kbp/s)",
+              data: [11.00, 8.21],
+              backgroundColor: "#22c55e",
+              borderColor: "#22c55e",
+              borderWidth: 0
+            }
+          ]
+        },
+        options: chartOptions("Thousand base pairs per second")
+      });
+
+      (function () {
+        var costOpts = chartOptions("USD per generated Gbp");
+        costOpts.scales.y.ticks = {
+          callback: function (v) { return "$" + v.toLocaleString(); }
+        };
+        costOpts.plugins.tooltip.callbacks = {
+          label: function (ctx) {
+            return " " + ctx.dataset.label + ": $" + ctx.parsed.y.toLocaleString() + " / Gbp";
+          }
+        };
+        new Chart(document.getElementById("chart-cost"), {
+          type: "bar",
+          data: {
+            labels: ["Carbon-3B", "Carbon-8B"],
+            datasets: [
+              {
+                label: "Trainium2 one-chip starting point",
+                data: [56, 76],
+                backgroundColor: "#f59e0b",
+                borderColor: "#f59e0b",
+                borderWidth: 0
+              },
+              {
+                label: "A100 full-node floor",
+                data: [217, 342],
+                backgroundColor: "#6b7280",
+                borderColor: "#6b7280",
+                borderWidth: 0
+              },
+              {
+                label: "A100 normalized if all 8 GPUs are busy",
+                data: [27, 43],
+                backgroundColor: "#ef4444",
+                borderColor: "#ef4444",
+                borderWidth: 0
+              }
+            ]
+          },
+          options: costOpts
+        });
+      })();
+    </script>
+</body>
+</html>

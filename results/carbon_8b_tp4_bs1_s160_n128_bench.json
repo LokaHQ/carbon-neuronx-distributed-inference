@@ -1,0 +1,29 @@
+{
+  "e2e_model": {
+    "latency_ms_p50": 1386.7475986480713,
+    "latency_ms_p90": 1396.557903289795,
+    "latency_ms_p95": 1396.8120574951172,
+    "latency_ms_p99": 1400.629539489746,
+    "latency_ms_p100": 1401.5839099884033,
+    "latency_ms_avg": 1387.9279732704163,
+    "throughput": 115.2797573659296
+  },
+  "context_encoding_model": {
+    "latency_ms_p50": 11.596202850341797,
+    "latency_ms_p90": 11.888980865478516,
+    "latency_ms_p95": 11.942756175994873,
+    "latency_ms_p99": 11.944749355316162,
+    "latency_ms_p100": 11.945247650146484,
+    "latency_ms_avg": 11.643922328948975,
+    "throughput": 2748.2148279572425
+  },
+  "token_generation_model": {
+    "latency_ms_p50": 10.275959968566895,
+    "latency_ms_p90": 10.59103012084961,
+    "latency_ms_p95": 10.650467872619627,
+    "latency_ms_p99": 10.76953649520874,
+    "latency_ms_p100": 10.942220687866211,
+    "latency_ms_avg": 10.306333369157445,
+    "throughput": 97.79171502099649
+  }
+}
