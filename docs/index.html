@@ -830,8 +830,8 @@
   <a aria-label="Link to section" class="heading-anchor" href="#introduction">#</a>
 </h2>
 <p>
-  In 2003, sequencing a human genome cost around
-  <a href="https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost">$3 billion</a>.
+  The Human Genome Project, completed in 2003, cost around
+  <a href="https://www.genome.gov/about-genomics/fact-sheets/Sequencing-Human-Genome-cost">$3 billion</a> over 13 years to sequence the first human genome.
   Today, the sequencing bill is measured in hundreds of dollars. That changes the problem. For many bio and HCLS teams,
   the hard part is no longer getting enough sequence data. The hard part is turning that data into something useful:
   variant effect prediction, regulatory annotation, gene expression modeling, therapeutic sequence design, and repeated
@@ -850,7 +850,7 @@
 <p>
 <a href="https://huggingface.co/spaces/HuggingFaceBio/carbon-demo">Carbon</a>, released by Hugging Face Bio, is a very
   good step in the other direction. It is open, Apache 2.0, available in 500M, 3B, and 8B sizes, and trained on roughly
-  six trillion base pairs across eukaryotes, mRNA, and bacteria. It uses a 6-mer tokenizer, so six DNA bases become one
+  six trillion base pairs of eukaryotic genomic DNA, mRNA transcripts, and bacterial genomes. It uses a 6-mer tokenizer, so six DNA bases become one
   model token, while Factorized Nucleotide Supervision keeps the training objective aware of base-level prediction.
   Carbon-3B is reported to match <a href="https://arcinstitute.org/tools/evo">Evo2-7B</a> on key DNA benchmarks while
   being smaller and much faster. For infrastructure teams, the biggest gift is even more practical: Carbon is built on a
@@ -1427,7 +1427,7 @@
 <li id="ref-nucleotide-transformer">
               Dalla-Torre, H., Gonzalez, L., Mendoza-Revilla, J., et al. (2025).
               <em>The Nucleotide Transformer: Building and Evaluating Robust Foundation Models for Human Genomics.</em>
-              Nature Methods 22, 287-297 (2025). Transformer-based DNA foundation model from InstaDeep and EMBL-EBI;
+              Nature Methods 22, 287-297 (2025). Transformer-based DNA foundation model from InstaDeep, Nvidia, and Technical University of Munich;
               part of the landscape of genomic sequence models that Carbon addresses with its
               efficiency-first 6-mer design.
               <a href="https://www.nature.com/articles/s41592-024-02523-z">nature.com/articles/s41592-024-02523-z</a>
