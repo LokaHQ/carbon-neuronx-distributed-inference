@@ -6,16 +6,6 @@ It is intentionally focused: it does not vendor the full NxD Inference repositor
 contains the small Carbon compatibility patch, benchmark scripts, measured results, and
 the HTML blog artifact that can be published with GitHub Pages.
 
-## What This Repo Includes
-
-- `patches/nxdi-carbon-support.patch` - Carbon-related NxD Inference patch.
-- `scripts/` - setup, model download, compile, benchmark, and S3 upload helpers.
-- `experiments/` - Python benchmark/report scripts.
-- `results/` - curated JSON benchmark results from the Trainium2 run.
-- `configs/` - saved Neuron config JSON files for compiled artifacts.
-- `manifests/` - plain-text run manifests and result summaries.
-- `docs/index.html` - the GitHub Pages blog post.
-
 ## Why Carbon
 
 [Carbon](https://huggingface.co/collections/HuggingFaceBio/carbon) is Hugging Face Bio's open DNA
@@ -149,6 +139,16 @@ The intended Pages source is the `docs/` directory on the `main` branch. The rep
 
 The publishable technical article now lives in `docs/index.html`. It focuses on the setup commands,
 tokenizer fix, benchmark shape, and measured results.
+
+## What This Repo Includes
+
+- `patches/nxdi-carbon-support.patch` - Carbon-related NxD Inference patch.
+- `scripts/` - setup, model download, compile, benchmark, and S3 upload helpers.
+- `experiments/` - Python benchmark/report scripts.
+- `results/` - curated JSON benchmark results from the Trainium2 run.
+- `configs/` - saved Neuron config JSON files for compiled artifacts.
+- `manifests/` - plain-text run manifests and result summaries.
+- `docs/index.html` - the GitHub Pages blog post.
 
 ## Repository Layout
 
