@@ -1,0 +1,22 @@
+.venv*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local Neuron / NxDI checkouts and compiled artifacts.
+third_party/
+compiled/
+models/
+logs/
+tmp/
+
+# Local benchmark scratch output. Curated JSON results are tracked in results/.
+benchmark_report.json
+*.log
+
+# OS/editor noise.
+.DS_Store
+.idea/
+.vscode/

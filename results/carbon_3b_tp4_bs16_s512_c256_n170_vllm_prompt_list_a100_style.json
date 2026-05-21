@@ -1,0 +1,59 @@
+{
+  "model": "Carbon-3B-vllm-prompt-list",
+  "benchmark": "carbon_vllm_prompt_list_n16_1kbp",
+  "server": "vllm 0.16.0 Neuron DLC 0.16.0-neuronx-py312-sdk2.29.1-ubuntu24.04",
+  "runs": [
+    {
+      "run": 0,
+      "warmup": true,
+      "batch": 16,
+      "elapsed_s": 1.8411005969974212,
+      "generated_tokens": 2720,
+      "generated_bp_estimate": 16320,
+      "tokens_per_s": 1477.3771756067763,
+      "kbp_per_s_estimate": 8.864263053640657,
+      "choices": 16
+    },
+    {
+      "run": 1,
+      "warmup": false,
+      "batch": 16,
+      "elapsed_s": 1.80176995403599,
+      "generated_tokens": 2720,
+      "generated_bp_estimate": 16320,
+      "tokens_per_s": 1509.6266834215778,
+      "kbp_per_s_estimate": 9.057760100529466,
+      "choices": 16
+    },
+    {
+      "run": 2,
+      "warmup": false,
+      "batch": 16,
+      "elapsed_s": 1.7908816190320067,
+      "generated_tokens": 2720,
+      "generated_bp_estimate": 16320,
+      "tokens_per_s": 1518.805023790569,
+      "kbp_per_s_estimate": 9.112830142743414,
+      "choices": 16
+    },
+    {
+      "run": 3,
+      "warmup": false,
+      "batch": 16,
+      "elapsed_s": 1.8046311549842358,
+      "generated_tokens": 2720,
+      "generated_bp_estimate": 16320,
+      "tokens_per_s": 1507.233205238419,
+      "kbp_per_s_estimate": 9.043399231430515,
+      "choices": 16
+    }
+  ],
+  "summary": {
+    "p50_elapsed_s": 1.80176995403599,
+    "avg_elapsed_s": 1.7990942426840775,
+    "p50_tokens_per_s": 1509.6266834215778,
+    "avg_tokens_per_s": 1511.8883041501886,
+    "p50_kbp_per_s_estimate": 9.057760100529466,
+    "avg_kbp_per_s_estimate": 9.071329824901131
+  }
+}

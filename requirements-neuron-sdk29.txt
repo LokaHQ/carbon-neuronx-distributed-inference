@@ -1,0 +1,16 @@
+# Tested on AWS Neuron SDK 2.29 / PyTorch 2.9 Neuron runtime.
+# Prefer an AWS Neuron DLAMI or Neuron DLC where the system drivers are already installed.
+#
+# The bootstrap script configures the AWS Neuron pip index before installing these packages.
+torch==2.9.*
+torch-neuronx==2.9.*
+torch-xla==2.9.*
+neuronx-distributed
+neuronx-cc
+transformers==4.57.*
+huggingface-hub
+hf-xet>=1.1.10,<2.0.0
+sentencepiece
+blobfile
+pillow
+torchvision

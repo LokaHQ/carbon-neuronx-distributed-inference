@@ -1,0 +1,68 @@
+Carbon NxDI TP4 smoke manifest
+Date: 2026-05-19
+
+Target
+- Instance type: trn2.3xlarge
+- Neuron topology: LNC=2, 4 logical NeuronCores, 96 GB HBM
+- NxDI workspace: patched local checkout
+- Python environment: Neuron SDK 2.29 compatible virtual environment
+
+SDK
+- torch==2.9.1
+- torch-neuronx==2.9.0.2.13.26312+8e870898
+- torch-xla==2.9.0
+- neuronx-cc==2.24.5133.0+58f8de22
+- nki==0.3.0+23928721754.g18aa1271
+- neuronx-distributed==0.18.27753+1cafd54f
+- neuronx-distributed-inference==0.9.0+9f982a56.dev
+- transformers==4.57.6
+- numpy==1.26.4
+- scipy==1.12.0
+
+Shape
+- model_type: llama
+- torch_dtype: bfloat16
+- tp_degree: 4
+- batch_size: 1
+- max_context_length: 32
+- seq_len: 160
+- max_length: 160
+- max_new_tokens: 128
+- on_device_sampling: true
+- enable_bucketing: true
+- context_encoding_buckets: [32]
+- token_generation_buckets: [160]
+- top_k: 1
+- pad_token_id: 151643
+- logical_nc_config: 2
+- trust_remote_code: true
+- prompt: AAAAAAAAAAAAAAAA
+
+Results
+- Carbon-500M: compile_trace=67.76s, load=8.22s, e2e_p50=461.38ms, e2e_throughput=347.72tok/s, cte_p50=4.23ms, tkg_p50=3.09ms, tkg_throughput=323.20tok/s
+- Carbon-3B: compile_trace=101.35s, load=9.35s, e2e_p50=922.98ms, e2e_throughput=173.80tok/s, cte_p50=8.27ms, tkg_p50=6.69ms, tkg_throughput=150.83tok/s
+- Carbon-8B: compile_trace=164.55s, load=9.44s, e2e_p50=1386.75ms, e2e_throughput=115.28tok/s, cte_p50=11.60ms, tkg_p50=10.28ms, tkg_throughput=97.79tok/s
+
+Local result artifacts
+- results/carbon_500m_tp4_bs1_s160_n128_bench.json
+- results/carbon_3b_tp4_bs1_s160_n128_bench.json
+- results/carbon_8b_tp4_bs1_s160_n128_bench.json
+
+Local config artifacts
+- configs/compiled__carbon-500m-tp4-bs1-s160-n128-bf16__neuron_config.json
+- configs/compiled__carbon-3b-tp4-bs1-s160-n128-bf16__neuron_config.json
+- configs/compiled__carbon-8b-tp4-bs1-s160-n128-bf16__neuron_config.json
+
+Heavyweight artifacts
+- ${MODEL_ROOT}/Carbon-500M
+- ${MODEL_ROOT}/Carbon-3B
+- ${MODEL_ROOT}/Carbon-8B
+- ${COMPILED_ROOT}/Carbon-500M-tp4-bs1-s160-n128-bf16
+- ${COMPILED_ROOT}/Carbon-3B-tp4-bs1-s160-n128-bf16
+- ${COMPILED_ROOT}/Carbon-8B-tp4-bs1-s160-n128-bf16
+
+Notes
+- Carbon requires trust_remote_code=true for the custom tokenizer.
+- The NxDI demo was updated to expose trust_remote_code for tokenizer loading.
+- Carbon-500M and Carbon-8B emitted a GQA.CONVERT_TO_MHA fallback warning under TP=4.
+- Carbon-3B did not emit that warning because its four KV heads align with TP=4.

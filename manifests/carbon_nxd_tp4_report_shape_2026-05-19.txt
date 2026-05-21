@@ -1,0 +1,67 @@
+Carbon NxDI TP4 report-shape benchmark manifest
+Date: 2026-05-19
+
+Target
+- Instance type: trn2.3xlarge
+- Neuron hardware: 1 Trainium2 device, 4 logical NeuronCores, LNC=2
+- NxDI workspace: patched local checkout
+- SDK environment: Neuron SDK 2.29 compatible virtual environment
+- NxDI commit: 9f982a565c4b2d78c20148071915a47b7aa9b575
+
+Runtime
+- torch==2.9.1
+- torch-neuronx==2.9.0.2.13.26312+8e870898
+- torch-xla==2.9.0
+- neuronx-cc==2.24.5133.0+58f8de22
+- neuronx-distributed==0.18.27753+1cafd54f
+- neuronx-distributed-inference==0.9.0+9f982a56.dev
+- transformers==4.57.6
+
+Shape
+- Tensor parallel degree: 4
+- Batch size: 1
+- Dtype: bfloat16
+- Logical NC config: 2
+- Context bucket: 256
+- Token-generation bucket: 512
+- max_context_length: 256
+- seq_len: 512
+- max_length: 512
+- max_new_tokens: 180
+- pad_token_id: 151643
+- Prompt form for compact Carbon DNA tokenization: <dna>{1080_bp_sequence}
+
+Fixed-shape NxDI benchmark
+- Carbon-500M: compile_trace=69.73s, load=7.74s, cte_p50=5.49ms, cte_throughput=46362tok/s, tkg_p50=3.35ms, tkg_throughput=297.0tok/s, e2e_p50=693.76ms, e2e_throughput=737.5tok/s
+- Carbon-3B: compile_trace=96.54s, load=9.27s, cte_p50=13.14ms, cte_throughput=19473tok/s, tkg_p50=6.68ms, tkg_throughput=150.2tok/s, e2e_p50=1299.10ms, e2e_throughput=394.4tok/s
+- Carbon-8B: compile_trace=144.33s, load=10.25s, cte_p50=18.90ms, cte_throughput=13565tok/s, tkg_p50=8.32ms, tkg_throughput=120.4tok/s, e2e_p50=1604.55ms, e2e_throughput=319.2tok/s
+
+DNA prompt suite
+- Prompt cases: balanced, CpG island, AT-rich, GC-rich, ORF-like, TATA-box-like, CAG triplet repeat
+- Measurement protocol: one warmup and two measured runs per case
+- Carbon-500M: median_elapsed=0.689s, median_token_throughput=261.3tok/s, median_bp_throughput=1568bp/s, avg_valid_dna=100.0%
+- Carbon-3B: median_elapsed=1.277s, median_token_throughput=140.9tok/s, median_bp_throughput=846bp/s, avg_valid_dna=100.0%
+- Carbon-8B: median_elapsed=1.589s, median_token_throughput=113.3tok/s, median_bp_throughput=679bp/s, avg_valid_dna=99.0%
+
+Local result artifacts
+- results/carbon_500m_tp4_bs1_s512_c256_n180_bench.json
+- results/carbon_3b_tp4_bs1_s512_c256_n180_bench.json
+- results/carbon_8b_tp4_bs1_s512_c256_n180_bench.json
+- results/carbon_500m_tp4_bs1_s512_c256_n180_generation_suite.json
+- results/carbon_3b_tp4_bs1_s512_c256_n180_generation_suite.json
+- results/carbon_8b_tp4_bs1_s512_c256_n180_generation_suite.json
+
+Local config artifacts
+- configs/compiled__carbon-500m-tp4-bs1-s512-c256-n180-bf16__neuron_config.json
+- configs/compiled__carbon-3b-tp4-bs1-s512-c256-n180-bf16__neuron_config.json
+- configs/compiled__carbon-8b-tp4-bs1-s512-c256-n180-bf16__neuron_config.json
+
+Local report artifacts
+- docs/index.html
+
+Notes
+- Carbon's custom tokenizer must be loaded with trust_remote_code=true.
+- Mixed-base raw DNA may not use the compact 6-mer path automatically; use explicit <dna> mode.
+- Carbon-500M and Carbon-8B run under TP=4, but emit NxDI's GQA-to-MHA fallback warning.
+- Carbon-3B is cleaner under TP=4 because its four KV heads align with the tensor parallel degree.
+- Measurements are direct 6-mer token generation, not FNS base-pair-level marginal decoding/scoring.
